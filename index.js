@@ -16,7 +16,16 @@ const io = new Server(httpServer, {
     },
 });
 
-app.use(cors());
+app.use(cors(
+    {
+        origin: [
+            'http://localhost:5173',
+            'https://task-mate-1.web.app',
+            'https://task-mate-1.firebaseapp.com'
+        ],
+        credentials: true
+    }
+));
 app.use(express.json());
 
 
@@ -40,8 +49,10 @@ async function run() {
       const taskCollection = database.collection("tasks");
       const userCollection = database.collection("users");
 
-    app.get('/tasks', async(req, res) => {                     
-        const cursor =  taskCollection.find();       
+    app.get('/tasks/:email', async (req, res) => {       
+      const userEmail = req.params.email;
+       const query = { user: userEmail }
+        const cursor =  taskCollection.find(query);       
         const result = await cursor.toArray();
         res.send(result);
     });
@@ -89,7 +100,22 @@ async function run() {
 
             const result = await taskCollection.deleteOne(query);          
             res.send(result);
-    });
+      });
+    
+    // move tasks
+      app.patch('/tasks/:id', async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+
+      const filter = { _id: new ObjectId(id) }
+      const updateTask = {
+          $set: {
+          status: data.status,
+          }
+      }
+      const result = await taskCollection.updateOne(filter, updateTask);
+      res.send(result);
+      });
 
      //  Save User info
     app.post('/users', async (req, res) => {
@@ -103,6 +129,7 @@ async function run() {
             const result = await userCollection.insertOne(user);
             res.send(result);
     });
+
       
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
